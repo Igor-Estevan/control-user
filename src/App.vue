@@ -4,15 +4,17 @@
     <div>
       <h4>Listagem</h4>
       <ul>
-        <li v-for="user in users" :key="user._id">
+        <li v-for="user in usuarios" :key="user._id">
           {{ user.firstName }} {{ user.lastName }}
+          <button @click="getUserById(user._id)">Editar</button>
           <button @click="deleteUser(user._id)">Excluir</button>
         </li>
       </ul>
     </div>
     <div>
       <hr />
-      <h4>Cadastro</h4>
+      <h4 v-if="action === 'add'">Cadastro</h4>
+      <h4 v-else>Alterar</h4>
       <div>
         <label>Primeiro nome</label>
         <input type="text" v-model="firstName" />
@@ -33,7 +35,10 @@
         <label>password</label>
         <input type="password" v-model="password" />
       </div>
-      <button @click="addUser">Enviar</button>
+      <button v-if="action === 'add'" @click="addUser()">Enviar</button>
+      <button v-if="action === 'update'" @click="updateUser(userId)">
+        Enviar
+      </button>
       <p>{{ message }}</p>
     </div>
   </div>
@@ -43,13 +48,15 @@ export default {
   name: "App",
   data: function () {
     return {
-      users: [],
+      usuarios: [],
       firstName: "",
       lastName: "",
       age: "",
       username: "",
       password: "",
       message: "",
+      action: "add",
+      userId: "",
     };
   },
   methods: {
@@ -64,7 +71,7 @@ export default {
           };
         });
       if (!result.error) {
-        this.users = result;
+        this.usuarios = result;
       }
     },
     addUser: async function () {
@@ -131,6 +138,64 @@ export default {
       if (result.deletedCount) {
         await this.getUser();
         this.message = "Usuário removido com sucesso";
+      }
+    },
+    getUserById: function (userId) {
+      const [usuario] = this.usuarios.filter((user) => user._id === userId);
+      this.action = "update";
+      this.userId = usuario._id;
+      this.firstName = usuario.firstName;
+      this.lastName = usuario.lastName;
+      this.age = usuario.age;
+      this.username = usuario.username;
+      this.password = usuario.password;
+    },
+    updateUser: async function (userId) {
+      const newUser = {
+        firstName: this.firstName,
+        lastName: this.lastName,
+        age: this.age,
+        username: this.username,
+        password: this.password,
+      };
+      if (newUser.firstName === "") {
+        this.message = "Primeiro nome é obrigatório";
+        return;
+      }
+      if (newUser.lastName === "") {
+        this.message = "Sobrenome nome é obrigatório";
+        return;
+      }
+      if (newUser.age === "") {
+        this.message = "Idade nome é obrigatória";
+        return;
+      }
+      if (newUser.username === "") {
+        this.message = "Username nome é obrigatório";
+        return;
+      }
+      if (newUser.password === "") {
+        this.message = "Senha nome é obrigatório";
+        return;
+      }
+      const result = await fetch("http://localhost:3000/" + userId, {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        method: "PUT",
+        body: JSON.stringify(newUser),
+      })
+        .then((res) => res.json())
+        .catch((error) => {
+          return {
+            error: true,
+            message: error,
+          };
+        });
+      if (!result.error) {
+        await this.getUser();
+        this.message = "Usuário alterado com sucesso";
       }
     },
   },
